@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SAGA MOBIL | V10</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- VARIABLES Y TEMA --- */
+        :root { --accent: #2563eb; --bg: #09090b; --card: #18181b; --text: #f4f4f5; --border: #27272a; --input: #09090b; }
+        .light-mode { --bg: #f8fafc; --card: #ffffff; --text: #0f172a; --border: #e2e8f0; --input: #f1f5f9; }
+        
+        body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text); transition: background 0.3s, color 0.3s; margin: 0; padding-bottom: 110px; -webkit-tap-highlight-color: transparent; }
+        
+        /* UI Elements */
+        .glass { background: var(--card); border: 1px solid var(--border); border-radius: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); transition: 0.3s; }
+        .light-mode .glass { box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+
+        .input-pro { background: var(--input); border: 2px solid var(--border); color: var(--text); padding: 16px; border-radius: 18px; width: 100%; outline: none; font-size: 16px; font-weight: 600; transition: 0.2s; }
+        .input-pro:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1); }
+
+        .btn-action { width: 100%; padding: 18px; background: var(--accent); color: white; border-radius: 20px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 10px 25px rgba(37, 99, 235, 0.3); transition: 0.2s; cursor: pointer; }
+        .btn-action:active { transform: scale(0.97); }
+
+        /* Navegación Dock */
+        .dock { position: fixed; bottom: 20px; left: 15px; right: 15px; height: 75px; background: rgba(24, 24, 27, 0.9); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); border-radius: 30px; display: flex; justify-content: space-around; align-items: center; z-index: 1000; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        .light-mode .dock { background: rgba(255, 255, 255, 0.9); border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 20px 50px rgba(0,0,0,0.1); }
+        
+        .dock-item { display: flex; flex-direction: column; align-items: center; color: #71717a; transition: 0.3s; flex: 1; cursor: pointer; }
+        .dock-item.active { color: var(--accent); transform: translateY(-5px); }
+        .dock-item span { font-size: 9px; font-weight: 800; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        /* Animaciones */
+        .page-content { display: none; padding: 25px 20px; animation: fadeIn 0.4s ease; }
+        .page-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Vistas Previas Documentos */
+        .preview-container { background: #222; border-radius: 24px; overflow: hidden; height: 480px; border: 2px dashed var(--border); position: relative; margin-bottom: 20px; display: flex; justify-content: center; padding-top: 20px; }
+        .sheet-a4 { background: white !important; color: black !important; width: 794px; min-height: 1123px; padding: 50px; transform: scale(0.4); transform-origin: top center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+
+        /* Acordeón Historial */
+        .day-group { margin-bottom: 15px; overflow: hidden; }
+        .day-header { padding: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); border-bottom: 1px solid var(--border); }
+        .light-mode .day-header { background: rgba(0,0,0,0.03); }
+
+        /* Calculadora */
+        .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        .btn-calc { background: var(--card); border: 1px solid var(--border); padding: 15px; border-radius: 16px; font-size: 1.4rem; font-weight: 700; color: var(--text); cursor: pointer; }
+        .btn-calc:active { background: var(--accent); color: white; border-color: var(--accent); }
+    </style>
+</head>
+<body>
+
+    <nav class="dock">
+        <div onclick="nav('dash')" class="dock-item active" id="n-dash"><i data-lucide="layout-grid"></i><span>Panel</span></div>
+        <div onclick="nav('movs')" class="dock-item" id="n-movs"><i data-lucide="calendar-days"></i><span>Cierre</span></div>
+        <div onclick="nav('remi')" class="dock-item" id="n-remi"><i data-lucide="file-check"></i><span>Remitir</span></div>
+        <div onclick="nav('label')" class="dock-item" id="n-label"><i data-lucide="tag"></i><span>Rótulos</span></div>
+        <div onclick="nav('shelf')" class="dock-item" id="n-shelf"><i data-lucide="package"></i><span>Bodega</span></div>
+        <div onclick="nav('calc')" class="dock-item" id="n-calc"><i data-lucide="calculator"></i><span>Calc</span></div>
+    </nav>
+
+    <div id="modal-firma" class="fixed inset-0 bg-white z-[2000] hidden flex-col">
+        <div class="p-5 bg-zinc-900 text-white flex justify-between items-center shadow-lg">
+            <h2 class="text-lg font-black italic">FIRMA DEL RECEPTOR</h2>
+            <div class="flex gap-3">
+                <button onclick="sigPad.clear()" class="text-red-400 font-bold text-xs uppercase">Borrar</button>
+                <button onclick="guardarFirma()" class="bg-blue-600 px-6 py-2 rounded-full font-bold text-xs uppercase">Confirmar</button>
+            </div>
+        </div>
+        <canvas id="canvas-firma" class="flex-1 w-full bg-slate-100 cursor-crosshair"></canvas>
+    </div>
+
+    <main>
+        <section id="sec-dash" class="page-content active">
+            <header class="flex justify-between items-center mb-8">
+                <div>
+                    <h1 class="text-4xl font-black italic text-blue-600 tracking-tighter">SAGA <span class="text-zinc-500 font-light">V13</span></h1>
+                    <p class="text-[10px] font-bold uppercase tracking-[4px] opacity-60">Logistics Ultra</p>
+                </div>
+                <button onclick="toggleTheme()" class="w-12 h-12 glass flex items-center justify-center text-yellow-500 hover:bg-white/5 transition"><i data-lucide="sun" id="theme-icon"></i></button>
+            </header>
+
+            <div class="grid grid-cols-2 gap-4 mb-8">
+                <div class="glass p-6 border-b-4 border-blue-600">
+                    <p class="text-[10px] font-black uppercase opacity-50 mb-1">Stock Global</p>
+                    <h2 id="kpi-stock" class="text-4xl font-black">0</h2>
+                </div>
+                <div class="glass p-6 border-b-4 border-green-600">
+                    <p class="text-[10px] font-black uppercase opacity-50 mb-1">Movs. Hoy</p>
+                    <h2 id="kpi-today" class="text-4xl font-black">0</h2>
+                </div>
+            </div>
+
+            <div class="glass p-6 space-y-4">
+                <h3 class="text-xs font-black uppercase text-blue-600 tracking-widest mb-1">Registro Rápido</h3>
+                <div class="flex p-1.5 bg-zinc-800/20 rounded-2xl">
+                    <button id="btn-ent" onclick="setOp('ENTRADA')" class="flex-1 py-3 rounded-xl bg-blue-600 text-white font-black text-xs transition-all">ENTRADA</button>
+                    <button id="btn-sal" onclick="setOp('SALIDA')" class="flex-1 py-3 rounded-xl text-zinc-500 font-black text-xs transition-all">SALIDA</button>
+                </div>
+                <input type="text" id="m-resp" placeholder="Responsable / Operario" class="input-pro">
+                <input type="text" id="m-prod" placeholder="Producto" class="input-pro" list="list-prods">
+                <div class="grid grid-cols-2 gap-3">
+                    <input type="number" id="m-cant" placeholder="Cant." class="input-pro">
+                    <select id="m-shelf" class="input-pro text-sm">
+                        <option value="PASILLO A">ESTANTE A</option>
+                        <option value="PASILLO B">ESTANTE B</option>
+                        <option value="PARQUEADERO">ESTANTE C</option>
+                        <option value="OFICINA">PISO BODEGA</option>
+                        <option value="ENTREGADO">PATIO EXT.</option>
+                    </select>
+                </div>
+                <button onclick="registrar()" class="btn-action">GUARDAR REGISTRO</button>
+            </div>
+        </section>
+
+        <section id="sec-movs" class="page-content">
+            <h2 class="text-3xl font-black mb-6 italic">Cierre Diario</h2>
+            <div id="movs-grouped" class="space-y-4 pb-20">
+                </div>
+        </section>
+
+        <section id="sec-remi" class="page-content">
+            <h2 class="text-3xl font-black mb-6 italic">Remisión Executive</h2>
+            
+            <div class="glass p-6 space-y-4 mb-6">
+                <input type="text" id="r-cli" oninput="liveRem()" placeholder="Cliente / Empresa" class="input-pro font-bold">
+                <input type="text" id="r-doc" oninput="liveRem()" placeholder="NIT / Cédula" class="input-pro">
+                <input type="text" id="r-obs" oninput="liveRem()" placeholder="Observaciones (Opcional)" class="input-pro text-sm italic">
+                
+                <div class="flex gap-2 pt-2">
+                    <input type="text" id="r-item" placeholder="Item" class="input-pro" list="list-prods">
+                    <input type="number" id="r-cant" placeholder="#" class="input-pro w-24 text-center">
+                    <button onclick="addRemItem()" class="bg-blue-600 text-white rounded-2xl w-16 flex items-center justify-center font-black text-2xl shadow-lg">+</button>
+                </div>
+                
+                <button onclick="abrirFirma()" class="w-full py-4 mt-2 bg-zinc-800 text-white rounded-2xl font-bold flex items-center justify-center gap-3 border border-zinc-700">
+                    <i data-lucide="pen-tool"></i> FIRMAR EN PANTALLA
+                </button>
+            </div>
+
+            <p class="text-[10px] font-black text-zinc-500 uppercase text-center mb-2 tracking-widest">VISTA PREVIA DE DOCUMENTO</p>
+            
+            <div class="preview-container">
+                <div id="remi-sheet" class="sheet-a4 relative">
+                    <div class="flex justify-between items-start border-b-[3px] border-black pb-8 mb-8">
+                        <div>
+                            <h1 class="text-6xl font-black text-blue-800 tracking-tighter leading-none">NICHOLL´S<br>TACTICA S.A.S</h1>
+                            <p class="text-sm font-bold tracking-[6px] uppercase mt-3 text-gray-500">FUSAGASUGA</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-4xl font-light text-gray-400 uppercase mb-1">Remisión</p>
+                            <p class="text-3xl font-black tracking-widest text-black">N° <span id="pv-num">0000</span></p>
+                            <p class="text-lg font-bold mt-2 text-blue-600" id="pv-fecha">00/00/0000</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-10 mb-12">
+                        <div>
+                            <p class="text-[10px] font-black uppercase text-blue-600 mb-1">Cliente / Destinatario</p>
+                            <h3 id="pv-cli" class="text-4xl font-black uppercase leading-tight mb-2">---</h3>
+                            <p id="pv-doc" class="text-lg font-bold text-gray-500">ID: ---</p>
+                        </div>
+                        <div class="bg-gray-50 p-5 rounded-r-2xl border-l-8 border-blue-600">
+                            <p class="text-[10px] font-black uppercase text-gray-400 mb-1">Observaciones</p>
+                            <p id="pv-obs" class="text-base italic font-semibold text-gray-700">Sin observaciones.</p>
+                        </div>
+                    </div>
+
+                    <table class="w-full text-xl mb-20">
+                        <thead>
+                            <tr class="bg-black text-white text-left">
+                                <th class="py-4 px-4 w-32 rounded-l-lg">CANT.</th>
+                                <th class="py-4 px-4 rounded-r-lg">DESCRIPCIÓN</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pv-table" class="divide-y-2 divide-gray-100 font-bold text-gray-800"></tbody>
+                    </table>
+
+                    <div class="absolute bottom-20 left-12 right-12">
+                        <div class="grid grid-cols-2 gap-20">
+                            <div class="border-t-2 border-gray-300 pt-4">
+                                <p class="text-xs font-bold text-gray-400 uppercase">Autorizado Por</p>
+                                <p class="text-xl font-black mt-1">JULIAN ACOSTA</p>
+                            </div>
+                            <div class="border-t-2 border-black pt-4 relative">
+                                <p class="text-xs font-bold text-gray-400 uppercase">Recibido Conforme</p>
+                                <img id="pv-firma-img" class="h-24 absolute -top-20 left-0 hidden object-contain">
+                                <p id="pv-cli-sign" class="text-xl font-black mt-1 uppercase">---</p>
+                            </div>
+                        </div>
+                        <div class="text-center mt-12 pt-4 border-t border-gray-100">
+                            <p class="text-[9px] font-bold text-gray-400 tracking-[3px] uppercase">Documento generado digitalmente por SAGA JULIAN ACOSTA</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="exportPDF('remi-sheet', 'Remision')" class="btn-action bg-zinc-900 text-white border border-zinc-700">DESCARGAR PDF</button>
+        </section>
+
+        <section id="sec-label" class="page-content">
+            <h2 class="text-3xl font-black mb-6 italic">Rótulos de Carga</h2>
+            
+            <div class="glass p-6 space-y-3 mb-6">
+                <input type="text" id="l-dest" placeholder="DESTINO / CLIENTE" class="input-pro font-black uppercase">
+                <input type="text" id="l-cont" placeholder="CONTENIDO" class="input-pro">
+                <div class="grid grid-cols-2 gap-3">
+                    <input type="text" id="l-peso" placeholder="PESO" class="input-pro">
+                    <input type="text" id="l-caja" placeholder="CAJA N°" class="input-pro">
+                </div>
+                <button onclick="addLabel()" class="btn-action bg-indigo-600 text-sm py-4">AÑADIR A LA COLA</button>
+            </div>
+
+            <div class="flex justify-between items-center px-2 mb-2">
+                <span class="text-xs font-bold uppercase opacity-50">Cola de Impresión</span>
+                <button onclick="clearLabels()" class="text-red-500 text-xs font-black">BORRAR TODO</button>
+            </div>
+            
+            <div id="labels-list" class="space-y-2 mb-6"></div>
+
+            <button onclick="exportPDF('print-labels', 'Rotulos_Hoja')" class="btn-action">GENERAR HOJA A4 (PDF)</button>
+
+            <div class="hidden">
+                <div id="print-labels" class="bg-white w-[210mm] min-h-[297mm] p-8 grid grid-cols-1 gap-8 content-start"></div>
+            </div>
+        </section>
+
+        <section id="sec-shelf" class="page-content">
+            <h2 class="text-3xl font-black mb-6 italic text-blue-600">Stock por Zona</h2>
+            <div id="shelf-view" class="space-y-6 pb-20"></div>
+        </section>
+
+        <section id="sec-calc" class="page-content">
+            <h2 class="text-3xl font-black mb-6 italic">Calculadora</h2>
+            <div class="glass p-6">
+                <div id="calc-display" class="w-full bg-black/10 p-6 text-right text-5xl font-black rounded-2xl mb-6 border border-zinc-700/20 overflow-hidden">0</div>
+                <div class="calc-grid">
+                    <button class="btn-calc text-red-500" onclick="cClear()">C</button>
+                    <button class="btn-calc" onclick="cIn('/')">/</button>
+                    <button class="btn-calc" onclick="cIn('*')">×</button>
+                    <button class="btn-calc bg-blue-600 text-white border-none" onclick="cIn('-')">-</button>
+                    <button class="btn-calc" onclick="cIn('7')">7</button>
+                    <button class="btn-calc" onclick="cIn('8')">8</button>
+                    <button class="btn-calc" onclick="cIn('9')">9</button>
+                    <button class="btn-calc bg-blue-600 text-white border-none" onclick="cIn('+')">+</button>
+                    <button class="btn-calc" onclick="cIn('4')">4</button>
+                    <button class="btn-calc" onclick="cIn('5')">5</button>
+                    <button class="btn-calc" onclick="cIn('6')">6</button>
+                    <button class="btn-calc bg-zinc-900 text-white row-span-2 border-none" onclick="cRes()">=</button>
+                    <button class="btn-calc" onclick="cIn('1')">1</button>
+                    <button class="btn-calc" onclick="cIn('2')">2</button>
+                    <button class="btn-calc" onclick="cIn('3')">3</button>
+                    <button class="btn-calc col-span-2" onclick="cIn('0')">0</button>
+                    <button class="btn-calc" onclick="cIn('.')">.</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <datalist id="list-prods"></datalist>
+
+    <script>
+        // --- BASE DE DATOS Y ESTADO ---
+        let db = JSON.parse(localStorage.getItem('SAGA_V13_DB')) || { productos: [], movs: [], labels: [], op: 'ENTRADA' };
+        let tempRem = [];
+        let sigPad;
+        let calcStr = "";
+
+        window.onload = () => {
+            render();
+            lucide.createIcons();
+            if (localStorage.getItem('SAGA_THEME') === 'light') toggleTheme(false);
+        };
+
+        const save = () => { localStorage.setItem('SAGA_V13_DB', JSON.stringify(db)); render(); };
+
+        // --- NAVEGACIÓN ---
+        function nav(id) {
+            document.querySelectorAll('.page-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.dock-item').forEach(el => el.classList.remove('active'));
+            document.getElementById('sec-' + id).classList.add('active');
+            document.getElementById('n-' + id).classList.add('active');
+            lucide.createIcons();
+            if(id === 'movs') renderGroupedMovs();
+            if(id === 'shelf') renderShelf();
+        }
+
+        function toggleTheme(switchIt = true) {
+            if(switchIt) document.body.classList.toggle('light-mode');
+            else document.body.classList.add('light-mode');
+            const isLight = document.body.classList.contains('light-mode');
+            document.getElementById('theme-icon').setAttribute('data-lucide', isLight ? 'moon' : 'sun');
+            localStorage.setItem('SAGA_THEME', isLight ? 'light' : 'dark');
+            lucide.createIcons();
+        }
+
+        // --- LÓGICA DE REGISTRO ---
+        function setOp(t) {
+            db.op = t;
+            document.getElementById('btn-ent').className = t === 'ENTRADA' ? "flex-1 py-3 rounded-xl bg-blue-600 text-white font-black text-xs transition-all" : "flex-1 py-3 rounded-xl text-zinc-500 font-black text-xs transition-all";
+            document.getElementById('btn-sal').className = t === 'SALIDA' ? "flex-1 py-3 rounded-xl bg-red-600 text-white font-black text-xs transition-all" : "flex-1 py-3 rounded-xl text-zinc-500 font-black text-xs transition-all";
+        }
+
+        function registrar() {
+            const nom = document.getElementById('m-prod').value.toUpperCase();
+            const cant = parseInt(document.getElementById('m-cant').value);
+            const resp = document.getElementById('m-resp').value.toUpperCase();
+            const shelf = document.getElementById('m-shelf').value;
+
+            if(!nom || isNaN(cant) || !resp) return alert("Faltan datos");
+
+            let p = db.productos.find(x => x.nom === nom);
+            if(!p) { p = { nom, stk: 0, shelf, note: '' }; db.productos.push(p); }
+            
+            p.stk += (db.op === 'ENTRADA' ? cant : -cant);
+            p.shelf = shelf;
+
+            // Fecha corta para agrupar
+            const hoy = new Date();
+            const fechaCorta = hoy.toLocaleDateString();
+            const hora = hoy.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            db.movs.push({ tipo: db.op, prod: nom, cant, resp, shelf, fecha: fechaCorta, hora: hora });
+            save();
+            ['m-prod', 'm-cant'].forEach(id => document.getElementById(id).value = "");
+            alert("✅ Registro guardado");
+        }
+
+        // --- HISTORIAL AGRUPADO (CIERRE) ---
+        function renderGroupedMovs() {
+            const container = document.getElementById('movs-grouped');
+            container.innerHTML = "";
+
+            const grupos = db.movs.slice().reverse().reduce((acc, mov) => {
+                if (!acc[mov.fecha]) acc[mov.fecha] = [];
+                acc[mov.fecha].push(mov);
+                return acc;
+            }, {});
+
+            if (Object.keys(grupos).length === 0) {
+                container.innerHTML = `<p class="text-center opacity-30 py-10">Sin movimientos registrados.</p>`;
+                return;
+            }
+
+            for (const fecha in grupos) {
+                const movsDia = grupos[fecha];
+                const totalEnt = movsDia.filter(m => m.tipo === 'ENTRADA').length;
+                const totalSal = movsDia.filter(m => m.tipo === 'SALIDA').length;
+
+                const dayDiv = document.createElement('div');
+                dayDiv.className = "day-group glass";
+                dayDiv.innerHTML = `
+                    <div class="day-header" onclick="this.nextElementSibling.classList.toggle('hidden')">
+                        <div>
+                            <p class="font-black text-blue-500 text-lg">${fecha === new Date().toLocaleDateString() ? 'HOY' : fecha}</p>
+                            <p class="text-[10px] font-bold opacity-50 uppercase">${movsDia.length} MOVIMIENTOS</p>
+                        </div>
+                        <div class="flex gap-4 text-xs font-black">
+                            <span class="text-green-500">↑ ${totalEnt}</span>
+                            <span class="text-red-500">↓ ${totalSal}</span>
+                            <i data-lucide="chevron-down" class="w-4 h-4 ml-1"></i>
+                        </div>
+                    </div>
+                    <div class="p-4 space-y-3 bg-black/5 hidden">
+                        ${movsDia.map(m => `
+                            <div class="flex justify-between items-center border-b border-white/5 pb-2">
+                                <div>
+                                    <p class="text-xs font-black uppercase">${m.prod}</p>
+                                    <p class="text-[9px] opacity-40 font-bold">${m.hora} • ${m.resp}</p>
+                                </div>
+                                <span class="font-black ${m.tipo === 'ENTRADA' ? 'text-blue-500' : 'text-red-500'}">
+                                    ${m.tipo === 'ENTRADA' ? '+' : '-'}${m.cant}
+                                </span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                container.appendChild(dayDiv);
+            }
+            lucide.createIcons();
+        }
+
+        // --- REMISIONES ---
+        function abrirFirma() {
+            document.getElementById('modal-firma').style.display = 'flex';
+            const c = document.getElementById('canvas-firma');
+            c.width = window.innerWidth;
+            c.height = window.innerHeight - 100;
+            sigPad = new SignaturePad(c);
+        }
+
+        function guardarFirma() {
+            if(!sigPad.isEmpty()) {
+                document.getElementById('pv-firma-img').src = sigPad.toDataURL();
+                document.getElementById('pv-firma-img').classList.remove('hidden');
+            }
+            document.getElementById('modal-firma').style.display = 'none';
+        }
+
+        function addRemItem() {
+            const n = document.getElementById('r-item').value.toUpperCase();
+            const c = document.getElementById('r-cant').value;
+            if(n && c) { tempRem.push({n, c}); liveRem(); document.getElementById('r-item').value = ""; document.getElementById('r-cant').value = ""; }
+        }
+
+        function liveRem() {
+            document.getElementById('pv-cli').innerText = document.getElementById('r-cli').value || '---';
+            document.getElementById('pv-cli-sign').innerText = document.getElementById('r-cli').value || '---';
+            document.getElementById('pv-doc').innerText = "ID: " + (document.getElementById('r-doc').value || '---');
+            document.getElementById('pv-obs').innerText = document.getElementById('r-obs').value || 'Sin observaciones.';
+            document.getElementById('pv-fecha').innerText = new Date().toLocaleDateString();
+            document.getElementById('pv-num').innerText = Date.now().toString().slice(-4);
+            
+            document.getElementById('pv-table').innerHTML = tempRem.map(i => `
+                <tr class="border-b border-gray-100">
+                    <td class="py-3 px-4 text-blue-700 font-black">${i.c}</td>
+                    <td class="py-3 px-4 uppercase">${i.n}</td>
+                </tr>
+            `).join('');
+        }
+
+        // --- RÓTULOS A4 ---
+        function addLabel() {
+            const d = document.getElementById('l-dest').value.toUpperCase();
+            const c = document.getElementById('l-cont').value.toUpperCase();
+            const p = document.getElementById('l-peso').value;
+            const b = document.getElementById('l-caja').value;
+            if(!d || !c) return alert("Faltan datos");
+            db.labels.push({d, c, p, b});
+            save();
+            renderLabels();
+            ['l-dest','l-cont','l-peso','l-caja'].forEach(id => document.getElementById(id).value = "");
+        }
+
+        function renderLabels() {
+            document.getElementById('labels-list').innerHTML = db.labels.map((l, i) => `
+                <div class="glass p-3 flex justify-between items-center text-xs">
+                    <span class="font-bold">${l.d} (${l.c})</span>
+                    <button onclick="db.labels.splice(${i},1);save();renderLabels()" class="text-red-500 font-black">X</button>
+                </div>
+            `).join('');
+
+            document.getElementById('print-labels').innerHTML = db.labels.map(l => `
+                <div style="border:8px solid black; padding:30px; height:135mm; display:flex; flex-direction:column; page-break-inside: avoid; font-family: sans-serif; color: black;">
+                    <div style="background:black; color:white; padding:15px; text-align:center; font-size:30px; font-weight:900;">SAGA MOBIL | FRÁGIL</div>
+                    <div style="flex:1; padding-top:30px;">
+                        <p style="font-size:14px; font-weight:bold; color:#555;">DESTINATARIO:</p>
+                        <h1 style="font-size:55px; font-weight:900; line-height:1; margin:0;">${l.d}</h1>
+                        <div style="margin-top:40px;">
+                             <p style="font-size:14px; font-weight:bold; color:#555;">CONTENIDO:</p>
+                             <p style="font-size:35px; font-weight:bold; margin:0;">${l.c}</p>
+                        </div>
+                    </div>
+                    <div style="display:flex; border-top:6px solid black; margin-top:20px;">
+                        <div style="flex:1; padding:15px; border-right:4px solid black;">
+                            <p style="font-size:12px; font-weight:bold;">PESO:</p>
+                            <p style="font-size:40px; font-weight:900;">${l.p || '--'}</p>
+                        </div>
+                        <div style="flex:1; padding:15px; text-align:right;">
+                            <p style="font-size:12px; font-weight:bold;">BULTOS:</p>
+                            <p style="font-size:40px; font-weight:900;">${l.b || '1'}</p>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function clearLabels() { db.labels = []; save(); renderLabels(); }
+
+        // --- BODEGA ---
+        function renderShelf() {
+            const zones = ['ESTANTE A', 'ESTANTE B', 'ESTANTE C', 'PISO BODEGA', 'PATIO'];
+            document.getElementById('shelf-view').innerHTML = zones.map(z => {
+                const items = db.productos.filter(p => p.shelf === z && p.stk > 0);
+                return `
+                    <div class="glass p-5">
+                        <div class="flex justify-between items-center mb-4 border-b border-zinc-700/50 pb-2">
+                            <h3 class="font-black text-blue-600 uppercase tracking-tighter">${z}</h3>
+                            <span class="text-xs font-bold bg-blue-600/10 text-blue-600 px-2 py-1 rounded">${items.length} ITEMS</span>
+                        </div>
+                        <div class="grid grid-cols-1 gap-2">
+                        ${items.map(i => `
+                            <div class="bg-zinc-500/10 p-3 rounded-xl flex justify-between items-center">
+                                <span class="font-bold text-sm">${i.nom}</span>
+                                <div class="flex gap-3 items-center">
+                                    <span class="text-blue-500 font-black text-lg">${i.stk}</span>
+                                    <button onclick="moveItem('${i.nom}')" class="text-zinc-500"><i data-lucide="arrow-right-left" class="w-4 h-4"></i></button>
+                                </div>
+                            </div>
+                        `).join('') || '<p class="text-xs opacity-30 italic text-center">Zona Vacía</p>'}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            lucide.createIcons();
+        }
+
+        function moveItem(nom) {
+            const newShelf = prompt("Mover a: ESTANTE A, ESTANTE B, ESTANTE C, PISO BODEGA, PATIO");
+            if(newShelf) {
+                let p = db.productos.find(x => x.nom === nom);
+                if(p) { p.shelf = newShelf.toUpperCase(); save(); renderShelf(); }
+            }
+        }
+
+        // --- CALCULADORA ---
+        function cIn(v) { calcStr += v; document.getElementById('calc-display').innerText = calcStr; }
+        function cClear() { calcStr = ""; document.getElementById('calc-display').innerText = "0"; }
+        function cRes() { try { calcStr = eval(calcStr).toString(); document.getElementById('calc-display').innerText = calcStr; } catch { calcStr = "Error"; } }
+
+        // --- UTILS ---
+        function exportPDF(id, name) {
+            const el = document.getElementById(id);
+            const opt = { margin: 0, filename: `${name}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
+            html2pdf().set(opt).from(el).save();
+        }
+
+        function render() {
+            document.getElementById('kpi-stock').innerText = db.productos.reduce((a,b)=>a+(b.stk>0?b.stk:0),0);
+            document.getElementById('kpi-today').innerText = db.movs.filter(m=>m.fecha === new Date().toLocaleDateString()).length;
+            document.getElementById('list-prods').innerHTML = db.productos.map(p => `<option value="${p.nom}">`).join('');
+            renderLabels();
+        }
+    </script>
+</body>
+</html>
