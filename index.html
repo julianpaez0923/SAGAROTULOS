@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SAGA PLATINUM | LOGISTICS & LABELS</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                        cyber: ['Orbitron', 'sans-serif'],
+                    },
+                    colors: {
+                        neon: '#00f3ff',
+                        void: '#050505',
+                        glass: 'rgba(20, 20, 23, 0.7)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: #000; color: white; overflow-x: hidden; }
+        
+        .glass-panel {
+            background: rgba(22, 22, 24, 0.6);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+        }
+        
+        .input-tech {
+            background: #111;
+            border: 1px solid #444;
+            color: #fff;
+            transition: all 0.3s ease;
+        }
+        .input-tech:focus {
+            border-color: #00f3ff;
+            background: #000;
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
+            outline: none;
+        }
+
+        .text-platinum {
+            background: linear-gradient(to bottom, #ffffff 0%, #a0a0a0 50%, #ffffff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .page-content { display: none; opacity: 0; transform: translateY(10px); transition: all 0.4s ease; }
+        .page-content.active { display: block; opacity: 1; transform: translateY(0); }
+        
+        .app-wrapper { transition: max-width 0.5s ease; width: 100%; margin: 0 auto; padding-bottom: 120px; }
+        .mode-mobile { max-width: 480px; border-left: 1px solid #222; border-right: 1px solid #222; min-height: 100vh; }
+        .mode-pc { max-width: 1200px; padding: 20px; }
+
+        /* --- ESTILOS RÓTULOS PRO ELITE --- */
+        .label-card {
+            background: white; border: 4px solid #000;
+            display: flex; flex-direction: column; position: relative;
+            aspect-ratio: 1.6 / 1; color: black; font-family: 'Arial Black', sans-serif;
+            margin-bottom: 20px;
+        }
+        .l-header { background: #000; color: #fff; padding: 8px 15px; display: flex; justify-content: space-between; align-items: center; }
+        .l-body-single { flex: 1; display: grid; grid-template-columns: 1fr 120px; border-bottom: 4px solid #000; }
+        .l-main-info { padding: 15px; border-right: 4px solid #000; display: flex; flex-direction: column; justify-content: center; }
+        .l-qty-zone { padding: 10px; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #f1f5f9; }
+        .l-content-name { font-size: 1.8rem; line-height: 1.1; font-weight: 900; }
+        .l-content-qty { font-size: 2.5rem; font-weight: 900; }
+        .l-footer { padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; height: 80px; }
+        .qr-wrapper { border: 2px solid #000; padding: 3px; background: #fff; width: 60px; height: 60px; }
+        
+        .multi-table { width: 100%; border-collapse: collapse; }
+        .multi-table td { font-size: 13px; font-weight: 900; padding: 4px 0; border-bottom: 1px solid #eee; }
+
+        .dock-container { position: fixed; bottom: 20px; left: 0; right: 0; display: flex; justify-content: center; z-index: 50; }
+        .dock { background: rgba(10,10,10,0.95); border: 1px solid #333; padding: 8px; border-radius: 24px; display: flex; gap: 4px; }
+        .dock-btn { width: 45px; height: 45px; border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #666; cursor: pointer; }
+        .dock-btn.active { background: #222; color: #00f3ff; }
+        .dock-btn span { font-size: 7px; font-weight: 700; margin-top: 2px; text-transform: uppercase; }
+
+        @media print {
+            body { background: white; }
+            aside, .dock-container, header, .no-print { display: none !important; }
+            .page-content { display: none !important; }
+            #sec-label-pro { display: block !important; opacity: 1 !important; }
+            .label-card { box-shadow: none; break-inside: avoid; border-width: 3px; }
+            .grid-small { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 10px; }
+            .grid-large { display: block !important; }
+            .grid-large .label-card { height: 13cm; width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="device-splash">
+        <div class="text-center mb-12 animate-pulse">
+            <h1 class="text-7xl font-cyber font-black text-platinum italic">SAGA</h1>
+            <p class="text-cyan-400 font-mono tracking-[0.8em] text-sm font-bold">PLATINUM v8.5</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl px-6">
+            <button onclick="setMode('mobile')" class="glass-panel p-8 rounded-3xl hover:border-cyan-500 transition-all text-left">
+                <i data-lucide="smartphone" class="w-12 h-12 text-cyan-400 mb-4"></i>
+                <h3 class="text-2xl font-bold font-cyber">Modo Móvil</h3>
+            </button>
+            <button onclick="setMode('pc')" class="glass-panel p-8 rounded-3xl hover:border-purple-500 transition-all text-left">
+                <i data-lucide="monitor" class="w-12 h-12 text-purple-400 mb-4"></i>
+                <h3 class="text-2xl font-bold font-cyber">Modo PC</h3>
+            </button>
+        </div>
+    </div>
+
+    <div id="app-wrap" class="app-wrapper hidden">
+        <header class="p-5 flex justify-between items-center bg-black/80 backdrop-blur-md sticky top-0 z-40 border-b border-white/10">
+            <div>
+                <h1 class="text-xl font-cyber font-bold italic">SAGA <span class="text-cyan-400">PLATINUM</span></h1>
+                <p id="live-date" class="text-[10px] text-gray-400 font-mono uppercase"></p>
+            </div>
+            <div id="live-clock" class="text-2xl font-mono font-bold text-white">00:00</div>
+        </header>
+
+        <main class="p-4">
+            <section id="sec-dash" class="page-content active">
+                <div class="glass-panel p-1 rounded-2xl flex mb-6">
+                    <button onclick="setOp('ENTRADA')" id="btn-ent" class="flex-1 py-3 rounded-xl font-black text-sm bg-emerald-600">ENTRADA</button>
+                    <button onclick="setOp('SALIDA')" id="btn-sal" class="flex-1 py-3 rounded-xl font-black text-sm text-gray-500">SALIDA</button>
+                </div>
+                <div class="glass-panel p-6 rounded-3xl space-y-4">
+                    <input type="text" id="m-prod" class="input-tech w-full p-4 rounded-xl font-black uppercase" placeholder="PRODUCTO...">
+                    <div class="grid grid-cols-2 gap-4">
+                        <input type="number" id="m-cant" class="input-tech w-full p-4 rounded-xl text-center font-black" placeholder="CANT">
+                        <input type="text" id="m-oc" class="input-tech w-full p-4 rounded-xl font-bold uppercase" placeholder="OC / REF">
+                    </div>
+                    <button onclick="registrarMov()" class="w-full bg-cyan-600 p-4 rounded-xl font-black uppercase tracking-widest">Registrar Movimiento</button>
+                </div>
+            </section>
+
+            <section id="sec-movs" class="page-content">
+                <h2 class="text-2xl font-cyber font-bold mb-4">HISTORIAL</h2>
+                <div class="glass-panel rounded-2xl overflow-hidden overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-white/5 text-cyan-400 font-cyber text-[10px]">
+                            <tr><th class="p-3">FECHA</th><th class="p-3">TIPO</th><th class="p-3">PROD</th><th class="p-3">CANT</th></tr>
+                        </thead>
+                        <tbody id="movs-table-body"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="sec-label-pro" class="page-content">
+                <div class="flex justify-between items-center mb-6 no-print">
+                    <h2 class="text-2xl font-cyber font-bold text-yellow-400">ETIQUETADO PRO</h2>
+                    <div class="flex gap-2">
+                        <button onclick="switchTab('single')" id="t-single" class="px-4 py-2 rounded-lg bg-white/10 text-[10px] font-black uppercase border border-white/20 active-tab">Simple</button>
+                        <button onclick="switchTab('multi')" id="t-multi" class="px-4 py-2 rounded-lg bg-white/10 text-[10px] font-black uppercase border border-white/20">Multi</button>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-6 rounded-3xl mb-8 no-print">
+                    <div id="form-single" class="label-form-section space-y-4">
+                        <input type="text" id="sName" class="input-tech w-full p-3 rounded-xl font-bold uppercase" placeholder="NOMBRE DEL PRODUCTO">
+                        <input type="text" id="sQty" class="input-tech w-full p-3 rounded-xl font-bold uppercase" placeholder="CANTIDAD (EJ: 50 UND)">
+                    </div>
+
+                    <div id="form-multi" class="label-form-section hidden space-y-4">
+                        <div class="flex gap-2">
+                            <input type="text" id="mItemName" class="input-tech flex-1 p-3 rounded-xl text-sm" placeholder="Ítem">
+                            <input type="text" id="mItemQty" class="input-tech w-20 p-3 rounded-xl text-center" placeholder="Cant">
+                            <button onclick="addItemToList()" class="bg-white text-black px-4 rounded-xl font-black">+</button>
+                        </div>
+                        <div id="temp-list" class="text-[10px] font-mono text-gray-400 bg-black/40 p-3 rounded-xl min-h-[50px]">Lista vacía...</div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 mt-6">
+                        <div>
+                            <label class="text-[9px] font-bold text-gray-500 uppercase">Copias</label>
+                            <input type="number" id="labelCopies" value="1" class="input-tech w-full p-2 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="text-[9px] font-bold text-gray-500 uppercase">Tamaño</label>
+                            <select id="pSize" onchange="updateLabelGrid()" class="input-tech w-full p-2 rounded-lg text-xs bg-black">
+                                <option value="grid-small">PEQUEÑO (8/hoja)</option>
+                                <option value="grid-large">GRANDE (2/hoja)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button onclick="generateLabel()" class="w-full bg-yellow-500 text-black p-4 rounded-xl font-black uppercase mt-6 shadow-lg shadow-yellow-500/20">Generar y Añadir</button>
+                    <button onclick="window.print()" class="w-full bg-white text-black p-3 rounded-xl font-black uppercase mt-2 flex items-center justify-center gap-2">
+                        <i data-lucide="printer" class="w-4 h-4"></i> Imprimir Cola
+                    </button>
+                </div>
+
+                <div id="label-container" class="grid-small"></div>
+            </section>
+
+            <section id="sec-remi" class="page-content">
+                <h2 class="text-2xl font-cyber font-bold mb-4 text-emerald-400">REMISIÓN</h2>
+                <div class="glass-panel p-5 rounded-3xl space-y-4">
+                    <input type="text" id="r-cli" placeholder="CLIENTE / DESTINATARIO" class="input-tech w-full p-4 rounded-xl font-bold uppercase">
+                    <button onclick="exportRem()" class="w-full bg-emerald-600 p-4 rounded-xl font-black uppercase">Generar PDF</button>
+                </div>
+            </section>
+
+        </main>
+
+        <div class="dock-container no-print">
+            <nav class="dock">
+                <div onclick="nav('dash')" class="dock-btn active" id="n-dash"><i data-lucide="layout-grid"></i><span>Panel</span></div>
+                <div onclick="nav('movs')" class="dock-btn" id="n-movs"><i data-lucide="table-2"></i><span>Hist</span></div>
+                <div onclick="nav('remi')" class="dock-btn" id="n-remi"><i data-lucide="file-text"></i><span>Remis</span></div>
+                <div onclick="nav('label-pro')" class="dock-btn border-2 border-yellow-500/50" id="n-label-pro"><i data-lucide="tags" class="text-yellow-400"></i><span class="text-yellow-400">Etiq+</span></div>
+                <div onclick="nav('tasks')" class="dock-btn" id="n-tasks"><i data-lucide="list-todo"></i><span>Tasks</span></div>
+            </nav>
+        </div>
+    </div>
+
+    <script>
+        let db = JSON.parse(localStorage.getItem('SAGA_PRO_DB')) || { productos: [], movs: [], multiItems: [] };
+        let activeTab = 'single';
+
+        function setMode(mode) {
+            const wrap = document.getElementById('app-wrap');
+            wrap.className = mode === 'mobile' ? "app-wrapper mode-mobile" : "app-wrapper mode-pc";
+            document.getElementById('device-splash').style.display = 'none';
+            wrap.classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function uClock() {
+            const n = new Date();
+            document.getElementById('live-clock').innerText = n.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+            document.getElementById('live-date').innerText = n.toLocaleDateString('es-ES', {weekday:'long', day:'numeric', month:'short'}).toUpperCase();
+        }
+        setInterval(uClock, 1000);
+
+        function nav(id) {
+            document.querySelectorAll('.page-content').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.dock-btn').forEach(i => i.classList.remove('active'));
+            document.getElementById('sec-'+id).classList.add('active');
+            document.getElementById('n-'+id).classList.add('active');
+            lucide.createIcons();
+        }
+
+        // --- LÓGICA ETIQUETADO ---
+        function switchTab(t) {
+            activeTab = t;
+            document.querySelectorAll('.label-form-section').forEach(s => s.classList.add('hidden'));
+            document.getElementById('form-' + t).classList.remove('hidden');
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
+        }
+
+        let multiList = [];
+        function addItemToList() {
+            const n = document.getElementById('mItemName').value.toUpperCase();
+            const q = document.getElementById('mItemQty').value.toUpperCase();
+            if(n && q) {
+                multiList.push({n, q});
+                document.getElementById('temp-list').innerHTML = multiList.map(i => `• ${i.n} (x${i.q})`).join('<br>');
+                document.getElementById('mItemName').value = ""; document.getElementById('mItemQty').value = "";
+            }
+        }
+
+        function generateLabel() {
+            const copies = document.getElementById('labelCopies').value || 1;
+            const container = document.getElementById('label-container');
+            
+            for(let i=0; i<copies; i++) {
+                const qrId = "qr_" + Date.now() + "_" + i;
+                const card = document.createElement('div');
+                card.className = 'label-card';
+                
+                if(activeTab === 'single') {
+                    const name = document.getElementById('sName').value.toUpperCase();
+                    const qty = document.getElementById('sQty').value.toUpperCase();
+                    card.innerHTML = `
+                        <div class="l-header"><b>SAGA LOGISTICS</b><span>⬆️</span></div>
+                        <div class="l-body-single">
+                            <div class="l-main-info"><span style="font-size:8px">PRODUCTO</span><div class="l-content-name">${name}</div></div>
+                            <div class="l-qty-zone"><span style="font-size:8px">CANT</span><div class="l-content-qty">${qty}</div></div>
+                        </div>
+                        <div class="l-footer">
+                            <div style="font-size:10px; font-family:monospace">ORIGINAL LABEL<br>${new Date().toLocaleDateString()}</div>
+                            <div id="${qrId}" class="qr-wrapper"></div>
+                        </div>
+                        <button onclick="this.parentElement.remove()" class="no-print absolute -top-3 -right-3 bg-red-600 w-8 h-8 rounded-full text-white font-bold">✕</button>
+                    `;
+                    container.appendChild(card);
+                    new QRCode(document.getElementById(qrId), { text: name + "|" + qty, width: 60, height: 60 });
+                } else {
+                    let rows = multiList.map(it => `<tr><td>${it.n}</td><td style="text-align:right">${it.q}</td></tr>`).join('');
+                    card.innerHTML = `
+                        <div class="l-header"><b>SAGA MULTIPRODUCT</b><span>📦</span></div>
+                        <div style="flex:1; padding:10px; border-bottom:4px solid #000">
+                            <table class="multi-table"><thead><tr><th align="left">ITEM</th><th align="right">QTY</th></tr></thead><tbody>${rows}</tbody></table>
+                        </div>
+                        <div class="l-footer">
+                            <div style="font-size:10px; font-family:monospace">PACKING LIST<br>${new Date().toLocaleDateString()}</div>
+                            <div id="${qrId}" class="qr-wrapper"></div>
+                        </div>
+                        <button onclick="this.parentElement.remove()" class="no-print absolute -top-3 -right-3 bg-red-600 w-8 h-8 rounded-full text-white font-bold">✕</button>
+                    `;
+                    container.appendChild(card);
+                    new QRCode(document.getElementById(qrId), { text: JSON.stringify(multiList), width: 60, height: 60 });
+                }
+            }
+            if(activeTab === 'multi') { multiList = []; document.getElementById('temp-list').innerText = "Lista vacía..."; }
+        }
+
+        function updateLabelGrid() {
+            document.getElementById('label-container').className = document.getElementById('pSize').value;
+        }
+
+        // --- LÓGICA CORE MOVIMIENTOS ---
+        function setOp(val) {
+            op = val;
+            document.getElementById('btn-ent').className = op === 'ENTRADA' ? "flex-1 py-3 rounded-xl font-black text-sm bg-emerald-600" : "flex-1 py-3 rounded-xl font-black text-sm text-gray-500";
+            document.getElementById('btn-sal').className = op === 'SALIDA' ? "flex-1 py-3 rounded-xl font-black text-sm bg-red-600 text-white" : "flex-1 py-3 rounded-xl font-black text-sm text-gray-500";
+        }
+
+        function registrarMov() {
+            const prod = document.getElementById('m-prod').value.toUpperCase();
+            const cant = parseFloat(document.getElementById('m-cant').value);
+            if(!prod || isNaN(cant)) return alert("Faltan datos");
+            db.movs.push({ tipo: op, prod, cant, ts: new Date().toISOString() });
+            localStorage.setItem('SAGA_PRO_DB', JSON.stringify(db));
+            alert("Movimiento Registrado");
+            renderMovs();
+        }
+
+        function renderMovs() {
+            const tbody = document.getElementById('movs-table-body');
+            tbody.innerHTML = db.movs.slice().reverse().map(m => `
+                <tr class="border-b border-white/5">
+                    <td class="p-3 text-[10px] text-gray-500">${new Date(m.ts).toLocaleDateString()}</td>
+                    <td class="p-3"><span class="text-[9px] font-bold ${m.tipo==='ENTRADA'?'text-emerald-400':'text-red-400'}">${m.tipo}</span></td>
+                    <td class="p-3 font-bold text-xs">${m.prod}</td>
+                    <td class="p-3 font-black">${m.cant}</td>
+                </tr>
+            `).join('');
+        }
+
+        window.onload = () => { uClock(); renderMovs(); };
+    </script>
+</body>
+</html>
